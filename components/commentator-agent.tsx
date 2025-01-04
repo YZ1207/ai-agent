@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 
 type Message = {
+  id: number;
   role: 'user' | 'ai';
   content: string;
 };
@@ -28,11 +29,17 @@ const COMMENTATOR_SYSTEM_PROMPT = `你是一个评论员，负责对用户提供
 const CommentatorAgent: React.FC<CommentatorAgentProps> = ({ messages }) => {
   const [comment, setComment] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [lastMessageId, setLastMessageId] = useState<number>(0);
+  const isGeneratingRef = useRef(false);
 
   const generateComment = async () => {
-    if (messages.length === 0) return;
+    if (isGeneratingRef.current || 
+        messages.length === 0 || 
+        messages[messages.length - 1].id === lastMessageId) return;
     
+    isGeneratingRef.current = true;
     setIsLoading(true);
+    
     try {
       // 将对话历史格式化为文本
       const conversationHistory = messages
@@ -69,20 +76,23 @@ const CommentatorAgent: React.FC<CommentatorAgentProps> = ({ messages }) => {
       const data = await response.json();
       const commentText = data.choices[0]?.message?.content || '无法生成评论';
       setComment(commentText);
+      
+      if (messages.length > 0) {
+        setLastMessageId(messages[messages.length - 1].id);
+      }
 
     } catch (error) {
       console.error('评论生成错误:', error);
       setComment('评论生成失败，请稍后再试。');
     } finally {
       setIsLoading(false);
+      isGeneratingRef.current = false;
     }
   };
 
   useEffect(() => {
-    if (messages.length > 0) {
-      generateComment();
-    }
-  }, [messages]); // 当消息历史更新时重新生成评论
+    generateComment();
+  }, [messages]);
 
   return (
     <div className="p-4 bg-gray-100 rounded-lg shadow-md">

@@ -63,6 +63,7 @@ const ChatInterface = () => {
   const abortControllerRef = useRef<AbortController | null>(null)
   const [isWebEnabled, setIsWebEnabled] = useState(false)
   const [commentatorMessage, setCommentatorMessage] = useState<string | null>(null)
+  const [showCommentator, setShowCommentator] = useState(false)
   
   // 取消未完成的请求
   useEffect(() => {
@@ -105,6 +106,8 @@ const ChatInterface = () => {
     e.preventDefault()
     if (!inputValue.trim() || isLoading) return
 
+    setShowCommentator(false)
+    
     const userMessage: Message = {
       id: Date.now(),
       content: inputValue,
@@ -170,7 +173,10 @@ const ChatInterface = () => {
 
       while (reader) {
         const { done, value } = await reader.read()
-        if (done) break
+        if (done) {
+          setShowCommentator(true)
+          break;
+        }
 
         const chunk = decoder.decode(value)
         const lines = chunk.split('\n')
@@ -207,7 +213,6 @@ const ChatInterface = () => {
     } finally {
       setIsLoading(false)
       abortControllerRef.current = null
-      setCommentatorMessage("这是评论员的思考：这次对话很有趣，用户提出了很好的问题。");
     }
   }
 
@@ -241,7 +246,7 @@ const ChatInterface = () => {
             </div>
           ))}
         </div>
-        {commentatorMessage && (
+        {showCommentator && messages.length > 0 && (
           <CommentatorAgent messages={messages} />
         )}
       </CardContent>
