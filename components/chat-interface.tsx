@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Paperclip, Globe, Mic, Send } from 'lucide-react'
+import CommentatorAgent from "@/components/commentator-agent"
 
 // 定义消息类型
 type Message = {
@@ -33,7 +34,7 @@ type SearchResult = {
 // 添加配置常量
 const API_CONFIG = {
   baseUrl: 'https://api.siliconflow.cn/v1/chat/completions',
-  model: 'deepseek-ai/deepseek-vl2', // 选择您想使用的模型
+  model: 'Qwen/Qwen2.5-7B-Instruct', // 选择您想使用的模型
   apiKey: process.env.NEXT_PUBLIC_SILICON_API_KEY || '', // 请确保在.env.local中设置此环境变量
   searchApiUrl: '/api/search' // 我们将添加一个新的API路由来处理搜索
 }
@@ -61,6 +62,7 @@ const ChatInterface = () => {
   const [isLoading, setIsLoading] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
   const [isWebEnabled, setIsWebEnabled] = useState(false)
+  const [commentatorMessage, setCommentatorMessage] = useState<string | null>(null)
   
   // 取消未完成的请求
   useEffect(() => {
@@ -205,6 +207,7 @@ const ChatInterface = () => {
     } finally {
       setIsLoading(false)
       abortControllerRef.current = null
+      setCommentatorMessage("这是评论员的思考：这次对话很有趣，用户提出了很好的问题。");
     }
   }
 
@@ -238,6 +241,9 @@ const ChatInterface = () => {
             </div>
           ))}
         </div>
+        {commentatorMessage && (
+          <CommentatorAgent messages={messages} />
+        )}
       </CardContent>
       
       <CardFooter className="border-t p-4">
