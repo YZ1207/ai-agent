@@ -5,8 +5,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Paperclip, Globe, Mic, Send } from 'lucide-react'
+import { Paperclip, Globe, Mic, Send, Star } from 'lucide-react'
 import CommentatorAgent from "@/components/commentator-agent"
+import { Rating } from "@/components/ui/rating"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog"
 
 // 定义消息类型
 type Message = {
@@ -64,6 +66,8 @@ const ChatInterface = () => {
   const [isWebEnabled, setIsWebEnabled] = useState(false)
   const [commentatorMessage, setCommentatorMessage] = useState<string | null>(null)
   const [showCommentator, setShowCommentator] = useState(false)
+  const [rating, setRating] = useState(0)
+  const [showFeedback, setShowFeedback] = useState(false)
   
   // 取消未完成的请求
   useEffect(() => {
@@ -146,17 +150,32 @@ const ChatInterface = () => {
           model: API_CONFIG.model,
           messages: [
             {
+              role: 'system',
+              content: '你是一个有帮助的AI助手。'
+            },
+            ...messages.map(msg => ({
+              role: msg.role,
+              content: msg.content
+            })),
+            {
               role: 'user',
               content: messageContent
             }
           ],
-          stream: true
+          stream: true,
+          temperature: 0.7,
+          max_tokens: 1000
         }),
         signal: abortControllerRef.current.signal
       })
 
       if (!response.ok) {
-        throw new Error('API请求失败')
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          `API请求失败: ${response.status} ${response.statusText}\n${
+            errorData.error?.message || JSON.stringify(errorData)
+          }`
+        );
       }
 
       // 创建一个新的AI消息
@@ -216,6 +235,12 @@ const ChatInterface = () => {
     }
   }
 
+  // 添加处理提交评分的函数
+  const handleRatingSubmit = () => {
+    setShowFeedback(true)
+    // 可以在这里添加将评分发送到后端的逻辑
+  }
+
   return (
     <Card className="w-full max-w-3xl mx-auto h-[600px] flex flex-col">
       <CardContent className="flex-1 overflow-auto p-4 space-y-4">
@@ -249,6 +274,11 @@ const ChatInterface = () => {
         {showCommentator && messages.length > 0 && (
           <CommentatorAgent messages={messages} />
         )}
+        {showFeedback && (
+          <div className="text-center text-sm text-muted-foreground py-2">
+            感谢您的反馈！
+          </div>
+        )}
       </CardContent>
       
       <CardFooter className="border-t p-4">
@@ -275,6 +305,26 @@ const ChatInterface = () => {
           <Button variant="outline" size="icon" type="button" disabled={isLoading}>
             <Mic className="h-4 w-4" />
           </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="icon" type="button" disabled={isLoading}>
+                <Star className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>为对话打分</DialogTitle>
+              </DialogHeader>
+              <div className="py-4 space-y-4">
+                <Rating value={rating} onChange={setRating} />
+                <DialogClose asChild>
+                  <Button onClick={handleRatingSubmit} className="w-full">
+                    提交评分
+                  </Button>
+                </DialogClose>
+              </div>
+            </DialogContent>
+          </Dialog>
           <Button type="submit" size="icon" disabled={isLoading}>
             <Send className="h-4 w-4" />
           </Button>
